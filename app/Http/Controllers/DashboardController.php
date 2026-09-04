@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Department;
-use App\Models\Leave;
-use App\Models\LeaveAllocation;
+use App\Models\Booking;
+use App\Models\Resource;
+use App\Models\ResourceCategory;
 use App\Models\User;
 use Illuminate\Http\Request;
 
@@ -13,98 +13,134 @@ class DashboardController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        $today = date('Y-m-d');
 
+        /*
+        |--------------------------------------------------------------------------
+        | Admin Dashboard
+        |--------------------------------------------------------------------------
+        */
         if ($user->isAdmin()) {
-            $totalEmployees = User::where('role', '!=', 'admin')->count();
-            $totalDepartments = Department::count();
-            $totalLeaveRequests = Leave::count();
-            $pendingRequests = Leave::where('status', 'pending')->count();
-            $approvedRequests = Leave::where('status', 'approved')->count();
-            $rejectedRequests = Leave::where('status', 'rejected')->count();
+            $totalEmployees = User::where('role', 'employee')->count();
 
-            $onLeaveToday = Leave::with(['user.department', 'leaveType'])
-                ->where('status', 'approved')
-                ->where('from_date', '<=', $today)
-                ->where('to_date', '>=', $today)
-                ->get();
+            $totalManagers = User::where('role', 'resource_manager')->count();
 
-            $upcomingLeaves = Leave::with(['user.department', 'leaveType'])
-                ->where('status', 'approved')
-                ->where('from_date', '>', $today)
-                ->orderBy('from_date', 'asc')
-                ->limit(5)
-                ->get();
+            $totalResources = Resource::count();
 
-            $recentRequests = Leave::with(['user.department', 'leaveType'])
-                ->orderBy('created_at', 'desc')
+            $totalCategories = ResourceCategory::count();
+
+            $totalBookings = Booking::count();
+
+            $pendingBookings = Booking::where('status', 'pending')->count();
+
+            $approvedBookings = Booking::where('status', 'approved')->count();
+
+            $rejectedBookings = Booking::where('status', 'rejected')->count();
+
+            $recentBookings = Booking::with(['user', 'resource'])
+                ->latest()
                 ->limit(6)
                 ->get();
 
             return view('dashboard.admin', compact(
-                'totalEmployees', 'totalDepartments', 'totalLeaveRequests',
-                'pendingRequests', 'approvedRequests', 'rejectedRequests',
-                'onLeaveToday', 'upcomingLeaves', 'recentRequests'
+                'totalEmployees',
+                'totalManagers',
+                'totalResources',
+                'totalCategories',
+                'totalBookings',
+                'pendingBookings',
+                'approvedBookings',
+                'rejectedBookings',
+                'recentBookings'
             ));
         }
 
-        if ($user->isManager()) {
-            $teamMembers = User::where('manager_id', $user->id)->get();
-            $teamUserIds = $teamMembers->pluck('id')->toArray();
+        /*
+        |--------------------------------------------------------------------------
+        | Resource Manager Dashboard
+        |--------------------------------------------------------------------------
+        */
+        if ($user->isResourceManager()) {
+            $assignedResources = Resource::where(
+                'manager_id',
+                $user->id
+            )->count();
 
-            $pendingApprovals = Leave::with(['user', 'leaveType'])
-                ->whereIn('user_id', $teamUserIds)
+            $resourceIds = Resource::where(
+                'manager_id',
+                $user->id
+            )->pluck('id');
+
+            $pendingBookings = Booking::with(['user', 'resource'])
+                ->whereIn('resource_id', $resourceIds)
                 ->where('status', 'pending')
+                ->latest()
                 ->get();
 
-            $onLeaveToday = Leave::with(['user', 'leaveType'])
-                ->whereIn('user_id', $teamUserIds)
+            $approvedBookings = Booking::with(['user', 'resource'])
+                ->whereIn('resource_id', $resourceIds)
                 ->where('status', 'approved')
-                ->where('from_date', '<=', $today)
-                ->where('to_date', '>=', $today)
+                ->latest()
                 ->get();
 
-            $upcomingTeamLeaves = Leave::with(['user', 'leaveType'])
-                ->whereIn('user_id', $teamUserIds)
+            $upcomingBookings = Booking::with(['user', 'resource'])
+                ->whereIn('resource_id', $resourceIds)
                 ->where('status', 'approved')
-                ->where('from_date', '>', $today)
-                ->orderBy('from_date', 'asc')
+                ->where('start_datetime', '>=', now())
+                ->orderBy('start_datetime')
+                ->limit(6)
                 ->get();
-
-            $approvedCount = Leave::whereIn('user_id', $teamUserIds)->where('status', 'approved')->count();
-            $rejectedCount = Leave::whereIn('user_id', $teamUserIds)->where('status', 'rejected')->count();
 
             return view('dashboard.manager', compact(
-                'teamMembers', 'pendingApprovals', 'onLeaveToday',
-                'upcomingTeamLeaves', 'approvedCount', 'rejectedCount'
+                'assignedResources',
+                'pendingBookings',
+                'approvedBookings',
+                'upcomingBookings'
             ));
         }
 
-        // Employee Dashboard
-        $allocations = LeaveAllocation::with('leaveType')
+        /*
+        |--------------------------------------------------------------------------
+        | Employee Dashboard
+        |--------------------------------------------------------------------------
+        */
+
+        $availableResources = Resource::where(
+            'status',
+            'available'
+        )->count();
+
+        $myBookings = Booking::with('resource')
             ->where('user_id', $user->id)
-            ->where('year', date('Y'))
+            ->latest()
             ->get();
 
-        $myLeaves = Leave::with('leaveType')
-            ->where('user_id', $user->id)
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $pendingCount = $myBookings
+            ->where('status', 'pending')
+            ->count();
 
-        $pendingCount = $myLeaves->where('status', 'pending')->count();
-        $approvedCount = $myLeaves->where('status', 'approved')->count();
-        $rejectedCount = $myLeaves->where('status', 'rejected')->count();
+        $approvedCount = $myBookings
+            ->where('status', 'approved')
+            ->count();
 
-        $upcomingLeaves = Leave::with('leaveType')
+        $rejectedCount = $myBookings
+            ->where('status', 'rejected')
+            ->count();
+
+        $upcomingBookings = Booking::with('resource')
             ->where('user_id', $user->id)
             ->where('status', 'approved')
-            ->where('from_date', '>=', $today)
-            ->orderBy('from_date', 'asc')
+            ->where('start_datetime', '>=', now())
+            ->orderBy('start_datetime')
+            ->limit(6)
             ->get();
 
         return view('dashboard.employee', compact(
-            'allocations', 'myLeaves', 'pendingCount',
-            'approvedCount', 'rejectedCount', 'upcomingLeaves'
+            'availableResources',
+            'myBookings',
+            'pendingCount',
+            'approvedCount',
+            'rejectedCount',
+            'upcomingBookings'
         ));
     }
 }

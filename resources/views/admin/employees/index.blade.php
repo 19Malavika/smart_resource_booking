@@ -67,7 +67,11 @@
                 <tr>
                     <td style="font-weight: 500; font-family: monospace;">{{ $emp->employee_id ?? '-' }}</td>
                     <td>
-                        <div style="font-weight: 500; color: var(--text-main);">{{ $emp->name }}</div>
+                        <div style="font-weight: 500;">
+                            <a href="{{ route('users.show', $emp) }}" style="color: var(--text-main); text-decoration: none;">
+                                {{ $emp->name }}
+                            </a>
+                        </div>
                         <div style="font-size: 12px; color: var(--text-muted);">{{ $emp->email }}</div>
                     </td>
                     <td>{{ $emp->department?->name ?? '-' }}</td>

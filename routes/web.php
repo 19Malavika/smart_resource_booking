@@ -2,9 +2,9 @@
 
 use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\EmployeeController;
-use App\Http\Controllers\Admin\LeaveTypeController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\LeaveController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -30,16 +30,22 @@ Route::middleware(['auth'])->group(function () {
     // Central Role-Based Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Employee & User Leave Routes
-    Route::get('/leaves', [LeaveController::class, 'index'])->name('leaves.index');
-    Route::post('/leaves', [LeaveController::class, 'store'])->name('leaves.store');
-    Route::post('/leaves/{leave}/cancel', [LeaveController::class, 'cancel'])->name('leaves.cancel');
-    Route::get('/calendar', [LeaveController::class, 'calendar'])->name('leaves.calendar');
+    // Profile Routes
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Manager Leave Approvals
-    Route::get('/manager/leaves', [LeaveController::class, 'pendingApprovals'])->name('manager.leaves.index');
-    Route::post('/manager/leaves/{leave}/approve', [LeaveController::class, 'approve'])->name('manager.leaves.approve');
-    Route::post('/manager/leaves/{leave}/reject', [LeaveController::class, 'reject'])->name('manager.leaves.reject');
+    // Users (Profiles)
+    Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show');
+
+    // Resources & Categories (Auth, Managed via Policies)
+    Route::resource('resource-categories', \App\Http\Controllers\ResourceCategoryController::class)->except(['show']);
+    Route::resource('resources', \App\Http\Controllers\ResourceController::class);
+
+    // Bookings
+    Route::resource('bookings', \App\Http\Controllers\BookingController::class);
+    Route::post('bookings/{booking}/cancel', [\App\Http\Controllers\BookingController::class, 'cancel'])->name('bookings.cancel');
+    Route::get('/calendar', [\App\Http\Controllers\BookingController::class, 'calendar'])->name('calendar');
 
     // Notifications
     Route::post('/notifications/{id}/mark-as-read', function($id) {
@@ -60,9 +66,6 @@ Route::middleware(['auth'])->group(function () {
 
         // Department Management
         Route::resource('departments', DepartmentController::class)->except(['create', 'show', 'edit']);
-
-        // Leave Type Management
-        Route::resource('leave-types', LeaveTypeController::class)->except(['create', 'show', 'edit']);
     });
 });
 

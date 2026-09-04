@@ -49,18 +49,6 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        // Auto allocate leave types
-        $leaveTypes = \App\Models\LeaveType::where('status', 'active')->get();
-        foreach ($leaveTypes as $type) {
-            \App\Models\LeaveAllocation::create([
-                'user_id' => $user->id,
-                'leave_type_id' => $type->id,
-                'year' => date('Y'),
-                'allocated_days' => $type->annual_allocation,
-                'used_days' => 0,
-            ]);
-        }
-
         event(new Registered($user));
 
         Auth::login($user);

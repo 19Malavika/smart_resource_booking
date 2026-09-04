@@ -1,25 +1,19 @@
 <?php
-
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-
-return new class extends Migration
-{
-    public function up(): void
-    {
+return new class extends Migration {
+    public function up(): void {
         Schema::create('leave_types', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->text('description')->nullable();
-            $table->integer('annual_allocation')->default(12);
-            $table->enum('status', ['active', 'inactive'])->default('active');
+            $table->integer('annual_allocation')->default(0);
+            $table->string('status')->default('active');
             $table->timestamps();
         });
     }
-
-    public function down(): void
-    {
+    public function down(): void {
         Schema::dropIfExists('leave_types');
     }
 };

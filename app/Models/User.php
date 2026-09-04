@@ -42,20 +42,32 @@ class User extends Authenticatable
         ];
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Role Helpers
+    |--------------------------------------------------------------------------
+    */
+
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
     }
 
-    public function isManager(): bool
+    public function isResourceManager(): bool
     {
-        return $this->role === 'manager';
+        return $this->role === 'resource_manager';
     }
 
     public function isEmployee(): bool
     {
         return $this->role === 'employee';
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Relationships
+    |--------------------------------------------------------------------------
+    */
 
     public function department(): BelongsTo
     {
@@ -72,13 +84,18 @@ class User extends Authenticatable
         return $this->hasMany(User::class, 'manager_id');
     }
 
-    public function leaveAllocations(): HasMany
+    public function bookings(): HasMany
     {
-        return $this->hasMany(LeaveAllocation::class, 'user_id');
+        return $this->hasMany(Booking::class, 'user_id');
     }
 
-    public function leaves(): HasMany
+    public function managedResources(): HasMany
     {
-        return $this->hasMany(Leave::class, 'user_id');
+        return $this->hasMany(Resource::class, 'manager_id');
+    }
+
+    public function auditLogs(): HasMany
+    {
+        return $this->hasMany(AuditLog::class, 'user_id');
     }
 }

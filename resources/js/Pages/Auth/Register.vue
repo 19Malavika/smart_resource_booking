@@ -22,7 +22,7 @@ const submit = () => {
 
 <template>
     <GuestLayout>
-        <Head title="Employee Registration - LeaveHQ Portal" />
+        <Head title="User Registration - ResourceHQ Portal" />
         
         <!-- Import Inter Font for Auth Pages -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -39,11 +39,11 @@ const submit = () => {
                 <!-- Brand Header -->
                 <div class="text-center">
                     <div class="inline-flex items-center justify-center gap-3">
-                        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600 text-xl font-bold text-white shadow-sm">
-                            L
+                        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 text-xl font-bold text-yellow-500 shadow-sm">
+                            R
                         </div>
                         <span class="text-2xl font-bold tracking-tight text-slate-900">
-                            LeaveHQ
+                            ResourceHQ
                         </span>
                     </div>
 
@@ -51,7 +51,7 @@ const submit = () => {
                         Create your account
                     </h2>
                     <p class="mt-2 text-sm text-slate-500">
-                        Employee Leave Management System
+                        Smart Resource Booking System
                     </p>
                 </div>
 
@@ -154,7 +154,7 @@ const submit = () => {
                             <button
                                 type="submit"
                                 :disabled="form.processing"
-                                class="mt-2 w-full rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition disabled:opacity-50"
+                                class="mt-2 w-full rounded-lg bg-[#FF9900] py-2.5 text-sm font-bold text-slate-900 shadow-sm hover:bg-[#fa8900] transition disabled:opacity-50"
                             >
                                 {{ form.processing ? 'Creating account...' : 'Create account' }}
                             </button>

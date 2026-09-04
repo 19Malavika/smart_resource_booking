@@ -27,7 +27,11 @@
                 @forelse($pendingLeaves as $leave)
                 <tr>
                     <td>
-                        <div style="font-weight: 700; font-size: 15px;">{{ $leave->user->name }}</div>
+                        <div style="font-weight: 700; font-size: 15px;">
+                            <a href="{{ route('users.show', $leave->user) }}" style="color: var(--text-main); text-decoration: none;">
+                                {{ $leave->user->name }}
+                            </a>
+                        </div>
                         <div style="font-size: 12px; color: var(--text-muted);">ID: {{ $leave->user->employee_id }} • {{ $leave->user->department?->name }}</div>
                     </td>
                     <td><span class="badge badge-pending">{{ $leave->leaveType->name }}</span></td>
