@@ -55,7 +55,7 @@ class User extends Authenticatable
 
     public function isResourceManager(): bool
     {
-        return $this->role === 'resource_manager';
+        return $this->role === 'manager';
     }
 
     public function isEmployee(): bool

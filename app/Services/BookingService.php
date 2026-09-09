@@ -21,70 +21,110 @@ class BookingService
     {
         return DB::transaction(function () use ($user, $data) {
             
-            // For now we get the resource without a lock (we'll implement lockForUpdate in Phase 7)
-            $resource = Resource::findOrFail($data['resource_id']);
+            // Lock the resource for update to prevent concurrent booking conflicts
+            $resource = Resource::lockForUpdate()->findOrFail($data['resource_id']);
 
-            // Parse dates
-            $start = Carbon::parse($data['start_datetime']);
-            $end = Carbon::parse($data['end_datetime']);
+            // Parse base dates
+            $baseStart = Carbon::parse($data['start_datetime']);
+            $baseEnd = Carbon::parse($data['end_datetime']);
+            $durationInSeconds = $baseEnd->diffInSeconds($baseStart);
 
-            // 1. Check resource status
+            $isRecurring = !empty($data['is_recurring']) && $data['is_recurring'];
+            $pattern = $data['recurring_pattern'] ?? 'NONE';
+            $occurrencesCount = $data['recurring_occurrences'] ?? 1;
+
+            if (!$isRecurring || $pattern === 'NONE') {
+                $occurrencesCount = 1;
+            }
+
+            // Calculate all dates first
+            $occurrences = [];
+            $currentStart = $baseStart->copy();
+            
+            for ($i = 0; $i < $occurrencesCount; $i++) {
+                if ($i > 0) {
+                    if ($pattern === 'DAILY') {
+                        $currentStart->addDay();
+                    } elseif ($pattern === 'WEEKLY') {
+                        $currentStart->addWeek();
+                    } elseif ($pattern === 'WEEKDAYS') {
+                        $currentStart->addDay();
+                        while ($currentStart->isWeekend()) {
+                            $currentStart->addDay();
+                        }
+                    }
+                }
+
+                $currentEnd = $currentStart->copy()->addSeconds($durationInSeconds);
+                $occurrences[] = [
+                    'start' => $currentStart->copy(),
+                    'end' => $currentEnd->copy()
+                ];
+            }
+
+            // 1. Check resource status & capacity once (applies to all)
             if ($resource->status !== 'AVAILABLE') {
-                throw ValidationException::withMessages([
-                    'resource_id' => 'This resource is not currently available for booking.'
-                ]);
+                throw ValidationException::withMessages(['resource_id' => 'This resource is not currently available for booking.']);
             }
-
-            // 2. Check capacity
             if ($data['participants'] > $resource->capacity) {
-                throw ValidationException::withMessages([
-                    'participants' => "The number of participants exceeds the resource capacity of {$resource->capacity}."
+                throw ValidationException::withMessages(['participants' => "The number of participants exceeds the resource capacity of {$resource->capacity}."]);
+            }
+
+            // 2. Determine Approval Requirement once
+            $approvalType = $resource->approval_type !== 'NONE' ? $resource->approval_type : $resource->category->approval_type;
+            $status = $approvalType === 'NONE' ? 'APPROVED' : 'PENDING';
+
+            // Validate ALL occurrences
+            foreach ($occurrences as $index => $occ) {
+                try {
+                    $this->validateWorkingHours($resource, $occ['start'], $occ['end']);
+                    $this->validateHolidays($occ['start'], $occ['end']);
+                    $this->validateMaintenance($resource, $occ['start'], $occ['end']);
+                    $this->validateConflicts($resource, $occ['start'], $occ['end']);
+                } catch (ValidationException $e) {
+                    // Prepend the occurrence date to the error message so the user knows which one failed
+                    $dateStr = $occ['start']->format('M j, Y');
+                    $errors = $e->errors();
+                    $modifiedErrors = [];
+                    foreach ($errors as $field => $messages) {
+                        $modifiedErrors[$field] = array_map(function($msg) use ($dateStr) {
+                            return "Conflict on {$dateStr}: {$msg} (The entire recurring series was rejected.)";
+                        }, $messages);
+                    }
+                    throw ValidationException::withMessages($modifiedErrors);
+                }
+            }
+
+            // If we get here, all occurrences passed validation!
+            $parentBooking = null;
+
+            foreach ($occurrences as $index => $occ) {
+                $booking = Booking::create([
+                    'user_id' => $user->id,
+                    'resource_id' => $resource->id,
+                    'start_datetime' => $occ['start'],
+                    'end_datetime' => $occ['end'],
+                    'purpose' => $data['purpose'],
+                    'participants' => $data['participants'],
+                    'priority' => $data['priority'] ?? 'NORMAL',
+                    'notes' => $data['notes'] ?? null,
+                    'status' => $status,
+                    'approval_type' => $approvalType,
+                    'approved_at' => $status === 'APPROVED' ? now() : null,
+                    'recurring_pattern' => $isRecurring ? $pattern : 'NONE',
+                    'parent_booking_id' => $parentBooking ? $parentBooking->id : null,
                 ]);
+
+                if ($index === 0) {
+                    $parentBooking = $booking;
+                }
             }
 
-            // 3. Check working hours & working days
-            $this->validateWorkingHours($resource, $start, $end);
-
-            // 4. Check holidays
-            $this->validateHolidays($start, $end);
-
-            // 5. Check maintenance
-            $this->validateMaintenance($resource, $start, $end);
-
-            // 6. Check conflicts with existing approved bookings
-            $this->validateConflicts($resource, $start, $end);
-
-            // 7. Determine Approval Requirement
-            // Categories can have an approval_type, but the Resource's approval_type overrides it if set.
-            // For this logic, we use the Resource's approval type (it defaults to NONE)
-            // Wait, we defined approval_type on both. Let's use the resource's approval type.
-            $approvalType = $resource->approval_type;
-            if ($approvalType === 'NONE') {
-                $status = 'APPROVED';
-            } else {
-                $status = 'PENDING';
-            }
-
-            // 8. Create the booking
-            $booking = Booking::create([
-                'user_id' => $user->id,
-                'resource_id' => $resource->id,
-                'start_datetime' => $start,
-                'end_datetime' => $end,
-                'purpose' => $data['purpose'],
-                'participants' => $data['participants'],
-                'priority' => $data['priority'] ?? 'NORMAL',
-                'notes' => $data['notes'] ?? null,
-                'status' => $status,
-                'approval_type' => $approvalType,
-                'approved_at' => $status === 'APPROVED' ? now() : null,
-            ]);
-
-            return $booking;
+            return $parentBooking;
         });
     }
 
-    protected function validateWorkingHours(Resource $resource, Carbon $start, Carbon $end)
+    public function validateWorkingHours(Resource $resource, Carbon $start, Carbon $end)
     {
         // Get configured availability for the day of the week
         $dayOfWeek = strtolower($start->format('l'));
@@ -116,7 +156,7 @@ class BookingService
         }
     }
 
-    protected function validateHolidays(Carbon $start, Carbon $end)
+    public function validateHolidays(Carbon $start, Carbon $end)
     {
         $dateString = $start->format('Y-m-d');
         $holiday = Holiday::where('date', $dateString)->first();
@@ -128,7 +168,7 @@ class BookingService
         }
     }
 
-    protected function validateMaintenance(Resource $resource, Carbon $start, Carbon $end)
+    public function validateMaintenance(Resource $resource, Carbon $start, Carbon $end)
     {
         $conflict = ResourceMaintenance::where('resource_id', $resource->id)
             ->whereIn('status', ['SCHEDULED', 'ACTIVE'])
@@ -143,11 +183,33 @@ class BookingService
         }
     }
 
+    public function validateAllRules(Resource $resource, array $data, Carbon $start, Carbon $end, ?int $excludeBookingId = null)
+    {
+        if ($resource->status !== 'AVAILABLE') {
+            throw ValidationException::withMessages(['resource_id' => 'This resource is not currently available for booking.']);
+        }
+        if (isset($data['participants']) && $data['participants'] > $resource->capacity) {
+            throw ValidationException::withMessages(['participants' => "The number of participants exceeds the resource capacity of {$resource->capacity}."]);
+        }
+
+        $this->validateWorkingHours($resource, $start, $end);
+        $this->validateHolidays($start, $end);
+        $this->validateMaintenance($resource, $start, $end);
+        $this->validateConflicts($resource, $start, $end, $excludeBookingId);
+    }
+
+    /**
+     * Check for conflicting bookings.
+     * 
+     * Time-Boundary Rule: End times are considered EXCLUSIVE.
+     * A booking from 10:00 AM to 11:00 AM does NOT conflict with a booking from 11:00 AM to 12:00 PM.
+     * This is enforced using strict inequality:
+     * (Existing Start < New End) AND (Existing End > New Start)
+     */
     public function validateConflicts(Resource $resource, Carbon $start, Carbon $end, ?int $excludeBookingId = null)
     {
         $query = Booking::where('resource_id', $resource->id)
-            ->whereIn('status', ['APPROVED', 'PENDING']) // We could allow pending overlaps, but usually we reject them if another pending exists to prevent double pending. Let's reject if there is any overlapping approved or pending booking that isn't expired. Wait, the prompt says Priority can't overwrite approved. For now we prevent overlap with APPROVED.
-            ->where('status', 'APPROVED') 
+            ->whereIn('status', ['APPROVED', 'PENDING'])
             ->where('start_datetime', '<', $end)
             ->where('end_datetime', '>', $start);
 
@@ -157,7 +219,7 @@ class BookingService
 
         if ($query->exists()) {
             throw ValidationException::withMessages([
-                'start_datetime' => 'The resource is already booked for this time period.'
+                'start_datetime' => 'The resource is already booked or pending approval for this time period.'
             ]);
         }
     }

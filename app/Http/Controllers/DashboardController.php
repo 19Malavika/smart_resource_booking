@@ -20,38 +20,43 @@ class DashboardController extends Controller
         |--------------------------------------------------------------------------
         */
         if ($user->isAdmin()) {
-            $totalEmployees = User::where('role', 'employee')->count();
+            $stats = [
+                'total_users' => User::count(),
+                'total_departments' => \App\Models\Department::count(),
+                'total_resources' => Resource::count(),
+                'total_categories' => ResourceCategory::count(),
+                'pending_requests' => Booking::where('status', 'PENDING')->count(),
+                'approved_bookings' => Booking::where('status', 'APPROVED')->count(),
+                'cancelled_bookings' => Booking::where('status', 'CANCELLED')->count(),
+                'maintenance_resources' => Resource::where('status', 'MAINTENANCE')->count(),
+            ];
 
-            $totalManagers = User::where('role', 'resource_manager')->count();
-
-            $totalResources = Resource::count();
-
-            $totalCategories = ResourceCategory::count();
-
-            $totalBookings = Booking::count();
-
-            $pendingBookings = Booking::where('status', 'pending')->count();
-
-            $approvedBookings = Booking::where('status', 'approved')->count();
-
-            $rejectedBookings = Booking::where('status', 'rejected')->count();
-
-            $recentBookings = Booking::with(['user', 'resource'])
+            $recent_bookings = Booking::with(['user', 'resource'])
                 ->latest()
                 ->limit(6)
                 ->get();
 
-            return view('dashboard.admin', compact(
-                'totalEmployees',
-                'totalManagers',
-                'totalResources',
-                'totalCategories',
-                'totalBookings',
-                'pendingBookings',
-                'approvedBookings',
-                'rejectedBookings',
-                'recentBookings'
-            ));
+            // Additional stats for chart etc can be calculated here
+            $sixMonthsAgo = now()->subMonths(5)->startOfMonth();
+            $utilizationData = Booking::where('status', 'APPROVED')
+                ->where('start_datetime', '>=', $sixMonthsAgo)
+                ->get()
+                ->groupBy(function ($booking) {
+                    return $booking->start_datetime->format('M');
+                })
+                ->map(function ($group) {
+                    return $group->count();
+                });
+
+            $chartLabels = collect([]);
+            $chartValues = collect([]);
+            for ($i = 5; $i >= 0; $i--) {
+                $month = now()->subMonths($i)->format('M');
+                $chartLabels->push($month);
+                $chartValues->push($utilizationData->get($month, 0));
+            }
+
+            return view('dashboard.admin', compact('stats', 'recent_bookings', 'chartLabels', 'chartValues'));
         }
 
         /*
@@ -72,29 +77,62 @@ class DashboardController extends Controller
 
             $pendingBookings = Booking::with(['user', 'resource'])
                 ->whereIn('resource_id', $resourceIds)
-                ->where('status', 'pending')
-                ->latest()
+                ->where('status', 'PENDING')
+                ->orderByRaw("
+                    CASE priority
+                        WHEN 'URGENT' THEN 4
+                        WHEN 'HIGH' THEN 3
+                        WHEN 'NORMAL' THEN 2
+                        WHEN 'LOW' THEN 1
+                        ELSE 0
+                    END DESC
+                ")
+                ->oldest()
                 ->get();
 
             $approvedBookings = Booking::with(['user', 'resource'])
                 ->whereIn('resource_id', $resourceIds)
-                ->where('status', 'approved')
+                ->where('status', 'APPROVED')
                 ->latest()
                 ->get();
 
             $upcomingBookings = Booking::with(['user', 'resource'])
                 ->whereIn('resource_id', $resourceIds)
-                ->where('status', 'approved')
+                ->where('status', 'APPROVED')
                 ->where('start_datetime', '>=', now())
                 ->orderBy('start_datetime')
                 ->limit(6)
                 ->get();
 
+            $sixMonthsAgo = now()->subMonths(5)->startOfMonth();
+            
+            $utilizationData = Booking::whereIn('resource_id', $resourceIds)
+                ->where('status', 'APPROVED')
+                ->where('start_datetime', '>=', $sixMonthsAgo)
+                ->get()
+                ->groupBy(function ($booking) {
+                    return $booking->start_datetime->format('M');
+                })
+                ->map(function ($group) {
+                    return $group->count();
+                });
+
+            $chartLabels = collect([]);
+            $chartValues = collect([]);
+            
+            for ($i = 5; $i >= 0; $i--) {
+                $month = now()->subMonths($i)->format('M');
+                $chartLabels->push($month);
+                $chartValues->push($utilizationData->get($month, 0));
+            }
+
             return view('dashboard.manager', compact(
                 'assignedResources',
                 'pendingBookings',
                 'approvedBookings',
-                'upcomingBookings'
+                'upcomingBookings',
+                'chartLabels',
+                'chartValues'
             ));
         }
 
@@ -104,10 +142,15 @@ class DashboardController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $availableResources = Resource::where(
+        $availableResourcesCount = Resource::where(
             'status',
-            'available'
+            'AVAILABLE'
         )->count();
+
+        $availableResourcesList = Resource::where('status', 'AVAILABLE')
+            ->latest()
+            ->limit(5)
+            ->get();
 
         $myBookings = Booking::with('resource')
             ->where('user_id', $user->id)
@@ -115,32 +158,56 @@ class DashboardController extends Controller
             ->get();
 
         $pendingCount = $myBookings
-            ->where('status', 'pending')
+            ->where('status', 'PENDING')
             ->count();
 
         $approvedCount = $myBookings
-            ->where('status', 'approved')
+            ->where('status', 'APPROVED')
             ->count();
 
         $rejectedCount = $myBookings
-            ->where('status', 'rejected')
+            ->where('status', 'REJECTED')
             ->count();
 
         $upcomingBookings = Booking::with('resource')
             ->where('user_id', $user->id)
-            ->where('status', 'approved')
+            ->where('status', 'APPROVED')
             ->where('start_datetime', '>=', now())
             ->orderBy('start_datetime')
             ->limit(6)
             ->get();
 
+        $sixMonthsAgo = now()->subMonths(5)->startOfMonth();
+        
+        $historyData = Booking::where('user_id', $user->id)
+            ->where('start_datetime', '>=', $sixMonthsAgo)
+            ->get()
+            ->groupBy(function ($booking) {
+                return $booking->start_datetime->format('M');
+            })
+            ->map(function ($group) {
+                return $group->count();
+            });
+
+        $chartLabels = collect([]);
+        $chartValues = collect([]);
+        
+        for ($i = 5; $i >= 0; $i--) {
+            $month = now()->subMonths($i)->format('M');
+            $chartLabels->push($month);
+            $chartValues->push($historyData->get($month, 0));
+        }
+
         return view('dashboard.employee', compact(
-            'availableResources',
+            'availableResourcesCount',
+            'availableResourcesList',
             'myBookings',
             'pendingCount',
             'approvedCount',
             'rejectedCount',
-            'upcomingBookings'
+            'upcomingBookings',
+            'chartLabels',
+            'chartValues'
         ));
     }
 }

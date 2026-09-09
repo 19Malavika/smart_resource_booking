@@ -7,6 +7,11 @@ import { ZiggyVue } from 'ziggy-js';
 
 import { initializeTheme } from '@/composables/useAppearance';
 import { initializeFlashToast } from '@/lib/flashToast';
+import { configureEcho } from '@laravel/echo-vue';
+
+configureEcho({
+    broadcaster: 'reverb',
+});
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 

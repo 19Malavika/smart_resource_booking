@@ -6,7 +6,7 @@
 <div style="max-width: 720px; margin: 0 auto;">
     <div style="margin-bottom: 20px;">
         <h1 style="font-size: 24px; font-weight: 800; color: var(--secondary);">Edit Employee: {{ $employee->name }}</h1>
-        <p style="font-size: 14px; color: var(--text-muted);">Update employee details, department, or manager assignment.</p>
+        <p style="font-size: 14px; color: var(--text-muted);">Update employee details, business unit, or manager assignment.</p>
     </div>
 
     <div class="card">
@@ -54,9 +54,9 @@
                     </select>
                 </div>
                 <div>
-                    <label style="font-size: 12px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 6px;">Department</label>
+                    <label style="font-size: 12px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 6px;">Business Unit</label>
                     <select name="department_id" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 14px;">
-                        <option value="">-- Select Department --</option>
+                        <option value="">-- Select Business Unit --</option>
                         @foreach($departments as $dept)
                             <option value="{{ $dept->id }}" {{ old('department_id', $employee->department_id) == $dept->id ? 'selected' : '' }}>{{ $dept->name }}</option>
                         @endforeach

@@ -1,120 +1,37 @@
 @extends('layouts.app')
-
-@section('title', 'Edit Resource')
-
+@section('title', 'Edit Resource — ' . $resource->name)
 @section('content')
-<div style="max-width: 800px; margin: 0 auto;">
-    <div style="margin-bottom: 24px;">
-        <h1 style="font-size: 24px; font-weight: 700; color: #0f1111; margin-bottom: 8px;">Edit {{ $resource->name }}</h1>
-        <div style="font-size: 14px; color: #565959;">
-            <a href="{{ route('resources.index') }}" style="color: #007185; text-decoration: none;">Resources</a>
-            <span style="margin: 0 8px;">›</span>
-            <span style="color: #0f1111; font-weight: 700;">Edit</span>
-        </div>
+<div class="reveal-up max-w-3xl mx-auto">
+    <div class="mb-6">
+        <a href="{{ route('admin.resources.index') }}" class="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-200 transition-colors mb-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>Back to Resources</a>
+        <h1 class="text-2xl font-bold text-zinc-50">Edit Resource</h1>
+        <p class="text-sm text-zinc-400 mt-1">{{ $resource->name }} ({{ $resource->code }})</p>
     </div>
-
-    @if ($errors->any())
-        <div class="card" style="border-left: 4px solid #c40000; padding: 16px; margin-bottom: 24px;">
-            <h3 style="color: #c40000; font-weight: 700; font-size: 14px; margin-bottom: 8px;">There was a problem</h3>
-            <ul style="color: #0f1111; font-size: 13px; padding-left: 20px; margin: 0;">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
+    <form method="POST" action="{{ route('admin.resources.update', $resource) }}" enctype="multipart/form-data" class="bg-zinc-950 border border-zinc-800 rounded-xl p-6 space-y-5">
+        @csrf @method('PUT')
+        <div class="reveal-up grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div><label class="block text-sm font-medium text-zinc-300 mb-1.5">Name <span class="text-red-400">*</span></label><input type="text" name="name" value="{{ old('name', $resource->name) }}" required class="w-full px-3 py-2.5 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-200 text-sm focus:outline-none focus:border-zinc-500">@error('name')<p class="text-red-400 text-xs mt-1">{{ $message }}</p>@enderror</div>
+            <div><label class="block text-sm font-medium text-zinc-300 mb-1.5">Code <span class="text-red-400">*</span></label><input type="text" name="code" value="{{ old('code', $resource->code) }}" required class="w-full px-3 py-2.5 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-200 text-sm focus:outline-none focus:border-zinc-500">@error('code')<p class="text-red-400 text-xs mt-1">{{ $message }}</p>@enderror</div>
         </div>
-    @endif
-
-    <div class="card" style="padding: 0;">
-        <form action="{{ route('resources.update', $resource) }}" method="POST">
-            @csrf
-            @method('PUT')
-
-            <div style="padding: 24px; display: flex; gap: 24px; flex-wrap: wrap;">
-                <!-- Left Column -->
-                <div style="flex: 1; min-width: 300px;">
-                    <div style="margin-bottom: 16px;">
-                        <label for="name" class="form-label">Resource Name</label>
-                        <input type="text" name="name" id="name" value="{{ old('name', $resource->name) }}" class="form-control" required>
-                        @error('name')<p style="color: #c40000; font-size: 12px; margin-top: 4px;">{{ $message }}</p>@enderror
-                    </div>
-
-                    <div style="margin-bottom: 16px;">
-                        <label for="code" class="form-label">Unique Code (e.g., MR-001)</label>
-                        <input type="text" name="code" id="code" value="{{ old('code', $resource->code) }}" class="form-control" required>
-                        @error('code')<p style="color: #c40000; font-size: 12px; margin-top: 4px;">{{ $message }}</p>@enderror
-                    </div>
-
-                    <div style="margin-bottom: 16px;">
-                        <label for="category_id" class="form-label">Category</label>
-                        <select name="category_id" id="category_id" class="form-control" style="background-color: #f0f2f2; border-color: #d5d9d9; box-shadow: 0 1px 2px rgba(15,17,17,.15) inset;" required>
-                            <option value="">Select a category</option>
-                            @foreach($categories as $category)
-                                <option value="{{ $category->id }}" {{ old('category_id', $resource->category_id) == $category->id ? 'selected' : '' }}>{{ $category->name }}</option>
-                            @endforeach
-                        </select>
-                        @error('category_id')<p style="color: #c40000; font-size: 12px; margin-top: 4px;">{{ $message }}</p>@enderror
-                    </div>
-
-                    <div style="margin-bottom: 16px;">
-                        <label for="manager_id" class="form-label">Resource Manager (Optional)</label>
-                        <select name="manager_id" id="manager_id" class="form-control" style="background-color: #f0f2f2; border-color: #d5d9d9; box-shadow: 0 1px 2px rgba(15,17,17,.15) inset;">
-                            <option value="">None</option>
-                            @foreach($managers as $manager)
-                                <option value="{{ $manager->id }}" {{ old('manager_id', $resource->manager_id) == $manager->id ? 'selected' : '' }}>{{ $manager->name }} ({{ $manager->role }})</option>
-                            @endforeach
-                        </select>
-                        @error('manager_id')<p style="color: #c40000; font-size: 12px; margin-top: 4px;">{{ $message }}</p>@enderror
-                    </div>
-                </div>
-
-                <!-- Right Column -->
-                <div style="flex: 1; min-width: 300px;">
-                    <div style="margin-bottom: 16px;">
-                        <label for="location" class="form-label">Location (Optional)</label>
-                        <input type="text" name="location" id="location" value="{{ old('location', $resource->location) }}" class="form-control">
-                        @error('location')<p style="color: #c40000; font-size: 12px; margin-top: 4px;">{{ $message }}</p>@enderror
-                    </div>
-
-                    <div style="margin-bottom: 16px;">
-                        <label for="capacity" class="form-label">Capacity (Number of Participants)</label>
-                        <input type="number" name="capacity" id="capacity" min="1" value="{{ old('capacity', $resource->capacity) }}" class="form-control" style="width: 150px;" required>
-                        @error('capacity')<p style="color: #c40000; font-size: 12px; margin-top: 4px;">{{ $message }}</p>@enderror
-                    </div>
-
-                    <div style="margin-bottom: 16px;">
-                        <label for="status" class="form-label">Status</label>
-                        <select name="status" id="status" class="form-control" style="background-color: #f0f2f2; border-color: #d5d9d9; box-shadow: 0 1px 2px rgba(15,17,17,.15) inset;" required>
-                            <option value="AVAILABLE" {{ old('status', $resource->status) == 'AVAILABLE' ? 'selected' : '' }}>Available</option>
-                            <option value="UNAVAILABLE" {{ old('status', $resource->status) == 'UNAVAILABLE' ? 'selected' : '' }}>Unavailable</option>
-                            <option value="MAINTENANCE" {{ old('status', $resource->status) == 'MAINTENANCE' ? 'selected' : '' }}>Maintenance</option>
-                            <option value="INACTIVE" {{ old('status', $resource->status) == 'INACTIVE' ? 'selected' : '' }}>Inactive</option>
-                        </select>
-                        @error('status')<p style="color: #c40000; font-size: 12px; margin-top: 4px;">{{ $message }}</p>@enderror
-                    </div>
-
-                    <div style="margin-bottom: 16px;">
-                        <label for="approval_type" class="form-label">Approval Requirement</label>
-                        <select name="approval_type" id="approval_type" class="form-control" style="background-color: #f0f2f2; border-color: #d5d9d9; box-shadow: 0 1px 2px rgba(15,17,17,.15) inset;" required>
-                            <option value="NONE" {{ old('approval_type', $resource->approval_type) == 'NONE' ? 'selected' : '' }}>None (Automatic)</option>
-                            <option value="MANAGER" {{ old('approval_type', $resource->approval_type) == 'MANAGER' ? 'selected' : '' }}>Manager Approval</option>
-                            <option value="ADMIN" {{ old('approval_type', $resource->approval_type) == 'ADMIN' ? 'selected' : '' }}>Admin Approval</option>
-                        </select>
-                        @error('approval_type')<p style="color: #c40000; font-size: 12px; margin-top: 4px;">{{ $message }}</p>@enderror
-                    </div>
-                </div>
-
-                <div style="flex: 0 0 100%;">
-                    <label for="description" class="form-label">Description</label>
-                    <textarea name="description" id="description" rows="3" class="form-control">{{ old('description', $resource->description) }}</textarea>
-                    @error('description')<p style="color: #c40000; font-size: 12px; margin-top: 4px;">{{ $message }}</p>@enderror
-                </div>
-            </div>
-
-            <div style="padding: 16px 24px; display: flex; justify-content: flex-end; gap: 12px; background-color: #f0f2f2; border-top: 1px solid var(--border-light); border-radius: 0 0 8px 8px;">
-                <a href="{{ route('resources.index') }}" class="btn btn-outline" style="border-radius: 8px;">Cancel</a>
-                <button type="submit" class="btn btn-primary">Save Changes</button>
-            </div>
-        </form>
-    </div>
+        <div class="reveal-up grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div><label class="block text-sm font-medium text-zinc-300 mb-1.5">Category <span class="text-red-400">*</span></label><select name="category_id" required class="w-full px-3 py-2.5 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-200 text-sm focus:outline-none focus:border-zinc-500">@foreach($categories as $cat)<option value="{{ $cat->id }}" {{ old('category_id', $resource->category_id) == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>@endforeach</select></div>
+            <div><label class="block text-sm font-medium text-zinc-300 mb-1.5">Manager</label><select name="manager_id" class="w-full px-3 py-2.5 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-200 text-sm focus:outline-none focus:border-zinc-500"><option value="">— None —</option>@foreach($managers as $mgr)<option value="{{ $mgr->id }}" {{ old('manager_id', $resource->manager_id) == $mgr->id ? 'selected' : '' }}>{{ $mgr->name }}</option>@endforeach</select></div>
+        </div>
+        <div class="reveal-up grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div><label class="block text-sm font-medium text-zinc-300 mb-1.5">Location</label><input type="text" name="location" value="{{ old('location', $resource->location) }}" class="w-full px-3 py-2.5 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-200 text-sm focus:outline-none focus:border-zinc-500"></div>
+            <div><label class="block text-sm font-medium text-zinc-300 mb-1.5">Capacity</label><input type="number" name="capacity" value="{{ old('capacity', $resource->capacity) }}" min="1" class="w-full px-3 py-2.5 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-200 text-sm focus:outline-none focus:border-zinc-500"></div>
+        </div>
+        <div class="reveal-up grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div><label class="block text-sm font-medium text-zinc-300 mb-1.5">Status <span class="text-red-400">*</span></label><select name="status" required class="w-full px-3 py-2.5 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-200 text-sm focus:outline-none focus:border-zinc-500"><option value="AVAILABLE" {{ old('status', $resource->status) == 'AVAILABLE' ? 'selected' : '' }}>Available</option><option value="UNAVAILABLE" {{ old('status', $resource->status) == 'UNAVAILABLE' ? 'selected' : '' }}>Unavailable</option><option value="MAINTENANCE" {{ old('status', $resource->status) == 'MAINTENANCE' ? 'selected' : '' }}>Maintenance</option></select></div>
+            <div><label class="block text-sm font-medium text-zinc-300 mb-1.5">Approval Type <span class="text-red-400">*</span></label><select name="approval_type" required class="w-full px-3 py-2.5 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-200 text-sm focus:outline-none focus:border-zinc-500"><option value="NONE" {{ old('approval_type', $resource->approval_type) == 'NONE' ? 'selected' : '' }}>None</option><option value="MANAGER" {{ old('approval_type', $resource->approval_type) == 'MANAGER' ? 'selected' : '' }}>Manager</option><option value="ADMIN" {{ old('approval_type', $resource->approval_type) == 'ADMIN' ? 'selected' : '' }}>Admin</option></select></div>
+            <div><label class="block text-sm font-medium text-zinc-300 mb-1.5">Price</label><input type="number" name="price" value="{{ old('price', $resource->price) }}" step="0.01" min="0" class="w-full px-3 py-2.5 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-200 text-sm focus:outline-none focus:border-zinc-500"></div>
+        </div>
+        <div><label class="block text-sm font-medium text-zinc-300 mb-1.5">Description</label><textarea name="description" rows="3" class="w-full px-3 py-2.5 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-200 text-sm focus:outline-none focus:border-zinc-500">{{ old('description', $resource->description) }}</textarea></div>
+        <div><label class="block text-sm font-medium text-zinc-300 mb-1.5">Image</label><input type="file" name="image" accept="image/*" class="w-full px-3 py-2.5 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-200 text-sm focus:outline-none focus:border-zinc-500 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:bg-zinc-700 file:text-zinc-200"></div>
+        <div class="flex items-center gap-3 pt-2 border-t border-zinc-800">
+            <button type="submit" class="btn btn-primary">Update Resource</button>
+            <a href="{{ route('admin.resources.index') }}" class="px-5 py-2.5 rounded-lg text-sm font-medium border border-zinc-700 text-zinc-300 hover:bg-zinc-800 transition-colors">Cancel</a>
+        </div>
+    </form>
 </div>
 @endsection

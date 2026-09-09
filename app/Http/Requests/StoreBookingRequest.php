@@ -23,6 +23,9 @@ class StoreBookingRequest extends FormRequest
             'participants' => ['required', 'integer', 'min:1'],
             'priority' => ['required', 'string', Rule::in(['LOW', 'NORMAL', 'HIGH', 'URGENT'])],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'is_recurring' => ['nullable', 'boolean'],
+            'recurring_pattern' => ['nullable', 'string', Rule::in(['DAILY', 'WEEKLY', 'WEEKDAYS'])],
+            'recurring_occurrences' => ['nullable', 'integer', 'min:2', 'max:52'],
         ];
     }
 

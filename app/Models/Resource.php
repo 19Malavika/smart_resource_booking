@@ -11,7 +11,7 @@ class Resource extends Model
 
     protected $fillable = [
         'category_id', 'manager_id', 'name', 'code', 'location',
-        'description', 'capacity', 'status', 'approval_type'
+        'description', 'capacity', 'status', 'approval_type', 'image_path', 'price'
     ];
 
     public function category()

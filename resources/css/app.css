@@ -172,3 +172,79 @@
         @apply bg-background text-foreground;
     }
 }
+
+@layer utilities {
+    .glass {
+        @apply bg-white/5 backdrop-blur-xs border border-white/10 rounded-xl;
+    }
+    .glow {
+        box-shadow: 0 0 20px rgba(255,255,255,0.3);
+    }
+    .gradient-primary {
+        background: linear-gradient(145deg, var(--tw-gradient-stops));
+        @apply from-zinc-400 to-zinc-600;
+    }
+}
+
+/* Enhanced hover and button gradient removed – component layer handles styling */
+
+@layer components {
+    .card {
+        @apply bg-zinc-950 border border-zinc-800 rounded-xl shadow-sm overflow-hidden transition-all duration-300;
+    }
+    
+    .card:hover {
+        @apply -translate-y-1 shadow-[0_8px_30px_rgb(0,0,0,0.12),0_0_20px_rgba(56,189,248,0.15)] border-zinc-700;
+        background: linear-gradient(145deg, var(--tw-gradient-stops));
+        @apply from-zinc-900 to-zinc-950;
+    }
+    
+    .form-control {
+        @apply w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-600 focus:border-transparent transition-all;
+    }
+    
+    .form-label {
+        @apply block text-sm font-medium text-zinc-300 mb-1.5;
+    }
+
+    .btn {
+        @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 cursor-pointer transform relative overflow-hidden;
+    }
+
+    .btn:active {
+        @apply translate-y-0.5 scale-95 shadow-inner;
+    }
+
+    .btn-primary {
+        @apply bg-zinc-50 text-zinc-900 shadow-[0_4px_14px_0_rgb(0,0,0,0.39)] hover:bg-white hover:shadow-[0_6px_20px_rgba(255,255,255,0.23)] hover:-translate-y-0.5;
+        background: linear-gradient(145deg, #ffffff, #e4e4e7);
+    }
+
+    .btn-outline {
+        @apply border border-zinc-700 bg-zinc-950 shadow-sm hover:bg-zinc-800 hover:text-zinc-50 hover:shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:-translate-y-0.5;
+    }
+
+    .btn-success {
+        @apply bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.15)] hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/50 hover:shadow-[0_4px_20px_rgba(16,185,129,0.3)] hover:-translate-y-0.5;
+    }
+
+    .btn-danger {
+        @apply bg-red-500/10 text-red-500 hover:bg-red-500/20 hover:text-red-400 border border-red-500/20 hover:shadow-[0_0_15px_rgba(239,68,68,0.25)] hover:-translate-y-0.5;
+    }
+
+    .data-table {
+        @apply w-full text-sm text-left text-zinc-300;
+    }
+    
+    .data-table th {
+        @apply px-4 py-3 bg-zinc-900/50 font-medium text-zinc-400 uppercase tracking-wider text-[11px] border-b border-zinc-800;
+    }
+    
+    .data-table td {
+        @apply px-4 py-3 border-b border-zinc-800/50 align-middle;
+    }
+    
+    .data-table tbody tr {
+        @apply hover:bg-zinc-900/30 transition-colors;
+    }
+}

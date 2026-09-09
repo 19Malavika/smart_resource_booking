@@ -21,12 +21,21 @@ class ResourceController extends Controller
             $query->where('category_id', $request->category_id);
         }
 
-        if ($request->filled('location')) {
-            $query->where('location', 'like', '%' . $request->location . '%');
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%")
+                  ->orWhere('location', 'like', "%{$search}%");
+            });
         }
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
+        }
+
+        if ($request->filled('min_capacity')) {
+            $query->where('capacity', '>=', $request->min_capacity);
         }
         
         // If the user is a manager (but not admin), optionally filter by their resources
@@ -34,7 +43,7 @@ class ResourceController extends Controller
             $query->where('manager_id', auth()->id());
         }
 
-        $resources = $query->paginate(10);
+        $resources = $query->paginate(10)->withQueryString();
         $categories = ResourceCategory::all();
 
         return view('admin.resources.index', compact('resources', 'categories'));
@@ -44,7 +53,7 @@ class ResourceController extends Controller
     {
         $this->authorize('create', Resource::class);
         $categories = ResourceCategory::all();
-        $managers = User::whereIn('role', ['admin', 'manager'])->get();
+        $managers = User::whereIn('role', ['admin', 'resource_manager'])->get();
 
         return view('admin.resources.create', compact('categories', 'managers'));
     }
@@ -60,14 +69,18 @@ class ResourceController extends Controller
     public function show(Resource $resource)
     {
         $this->authorize('view', $resource);
-        return view('admin.resources.show', compact('resource'));
+        
+        $resource->load(['category', 'manager', 'bookings.user', 'maintenances']);
+        $recentBookings = $resource->bookings()->with('user')->latest()->limit(10)->get();
+        
+        return view('admin.resources.show', compact('resource', 'recentBookings'));
     }
 
     public function edit(Resource $resource)
     {
         $this->authorize('update', $resource);
         $categories = ResourceCategory::all();
-        $managers = User::whereIn('role', ['admin', 'manager'])->get();
+        $managers = User::whereIn('role', ['admin', 'resource_manager'])->get();
 
         return view('admin.resources.edit', compact('resource', 'categories', 'managers'));
     }

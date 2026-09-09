@@ -30,22 +30,22 @@ class UserController extends Controller
         
         // Employee Stats
         $stats['total_bookings'] = $user->bookings->count();
-        $stats['pending_bookings'] = $user->bookings->where('status', 'pending')->count();
-        $stats['approved_bookings'] = $user->bookings->where('status', 'approved')->count();
-        $stats['rejected_bookings'] = $user->bookings->where('status', 'rejected')->count();
+        $stats['pending_bookings'] = $user->bookings->where('status', 'PENDING')->count();
+        $stats['approved_bookings'] = $user->bookings->where('status', 'APPROVED')->count();
+        $stats['rejected_bookings'] = $user->bookings->where('status', 'REJECTED')->count();
         
         if ($user->isResourceManager()) {
             $managedResourceIds = Resource::where('manager_id', $user->id)->pluck('id');
             $stats['total_managed_resources'] = $managedResourceIds->count();
             
             $stats['pending_approvals'] = Booking::whereIn('resource_id', $managedResourceIds)
-                                        ->where('status', 'pending')
+                                        ->where('status', 'PENDING')
                                         ->count();
             $stats['approved_requests'] = Booking::whereIn('resource_id', $managedResourceIds)
-                                        ->where('status', 'approved')
+                                        ->where('status', 'APPROVED')
                                         ->count();
             $stats['rejected_requests'] = Booking::whereIn('resource_id', $managedResourceIds)
-                                        ->where('status', 'rejected')
+                                        ->where('status', 'REJECTED')
                                         ->count();
             
             $stats['recent_activity'] = Booking::whereIn('resource_id', $managedResourceIds)

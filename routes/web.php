@@ -15,11 +15,26 @@ use Illuminate\Support\Facades\Route;
 
 // Root & Legacy Route Redirects to Portal
 Route::get('/', function () {
-    return auth()->check() ? redirect()->route('dashboard') : redirect()->route('login');
+    return view('welcome');
 });
 Route::get('/home', function () {
-    return auth()->check() ? redirect()->route('dashboard') : redirect()->route('login');
+    return view('welcome');
 })->name('home');
+
+Route::get('/sitemap.xml', function () {
+    $pages = [
+        url('/'),
+        url('/login'),
+        url('/register'),
+    ];
+    $xml = '<?xml version="1.0" encoding="UTF-8"?>';
+    $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
+    foreach ($pages as $page) {
+        $xml .= '<url><loc>' . $page . '</loc></url>';
+    }
+    $xml .= '</urlset>';
+    return response($xml)->header('Content-Type', 'text/xml');
+});
 
 Route::fallback(function () {
     return auth()->check() ? redirect()->route('dashboard') : redirect()->route('login');
@@ -35,17 +50,30 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
+    // Admin routes are now in routes/admin.php
+    
+    // Resource Utilization (Admins & Managers)
+    Route::get('/utilization', [\App\Http\Controllers\ResourceUtilizationController::class, 'index'])->name('utilization.index');
+    Route::get('/utilization/{resource}', [\App\Http\Controllers\ResourceUtilizationController::class, 'show'])->name('utilization.show');
+
     // Users (Profiles)
     Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show');
 
-    // Resources & Categories (Auth, Managed via Policies)
-    Route::resource('resource-categories', \App\Http\Controllers\ResourceCategoryController::class)->except(['show']);
     Route::resource('resources', \App\Http\Controllers\ResourceController::class);
 
     // Bookings
     Route::resource('bookings', \App\Http\Controllers\BookingController::class);
+    Route::post('bookings/{booking}/approve', [\App\Http\Controllers\BookingController::class, 'approve'])->name('bookings.approve');
+    Route::post('bookings/{booking}/reject', [\App\Http\Controllers\BookingController::class, 'reject'])->name('bookings.reject');
     Route::post('bookings/{booking}/cancel', [\App\Http\Controllers\BookingController::class, 'cancel'])->name('bookings.cancel');
     Route::get('/calendar', [\App\Http\Controllers\BookingController::class, 'calendar'])->name('calendar');
+    Route::get('/bookings-calendar', [\App\Http\Controllers\BookingController::class, 'calendar'])->name('bookings.calendar');
+
+    // Resource Maintenance & Availability
+    Route::post('resources/{resource}/maintenances', [\App\Http\Controllers\ResourceMaintenanceController::class, 'store'])->name('maintenances.store');
+    Route::patch('maintenances/{maintenance}', [\App\Http\Controllers\ResourceMaintenanceController::class, 'update'])->name('maintenances.update');
+    Route::delete('maintenances/{maintenance}', [\App\Http\Controllers\ResourceMaintenanceController::class, 'destroy'])->name('maintenances.destroy');
+    Route::put('resources/{resource}/availability', [\App\Http\Controllers\ResourceAvailabilityController::class, 'update'])->name('resources.availability.update');
 
     // Notifications
     Route::post('/notifications/{id}/mark-as-read', function($id) {
@@ -59,14 +87,7 @@ Route::middleware(['auth'])->group(function () {
         return back();
     })->name('notifications.mark-all-read');
 
-    // Admin Routes
-    Route::prefix('admin')->name('admin.')->group(function () {
-        // Employee Management
-        Route::resource('employees', EmployeeController::class);
-
-        // Department Management
-        Route::resource('departments', DepartmentController::class)->except(['create', 'show', 'edit']);
-    });
 });
 
 require __DIR__.'/auth.php';
+require __DIR__.'/test.php';

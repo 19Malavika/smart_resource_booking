@@ -35,7 +35,7 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->forget('url.intended');
 
-        return redirect()->route('dashboard');
+        return Inertia::location(route('dashboard'));
     }
 
     /**

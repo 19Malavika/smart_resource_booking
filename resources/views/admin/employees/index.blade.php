@@ -5,8 +5,8 @@
 @section('content')
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
     <div>
-        <h1 style="font-size: 24px; font-weight: 700; color: var(--text-main); letter-spacing: -0.5px;">Employee Directory</h1>
-        <p style="font-size: 14px; color: var(--text-muted); margin-top: 4px;">Manage company employees, departments, roles, and profiles.</p>
+        <h1 style="font-size: 24px; font-weight: 700; color: var(--text-main); letter-spacing: -0.5px;">User Management</h1>
+        <p style="font-size: 14px; color: var(--text-muted); margin-top: 4px;">Manage company employees, business units, roles, and profiles.</p>
     </div>
     <a href="{{ route('admin.employees.create') }}" class="btn btn-primary">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
@@ -23,7 +23,7 @@
         </div>
 
         <select name="department_id" class="form-control" onchange="this.form.submit()">
-            <option value="">All Departments</option>
+            <option value="">All Business Units</option>
             @foreach($departments as $dept)
                 <option value="{{ $dept->id }}" {{ request('department_id') == $dept->id ? 'selected' : '' }}>{{ $dept->name }}</option>
             @endforeach
@@ -54,7 +54,7 @@
                 <tr>
                     <th>Emp ID</th>
                     <th>Employee Name</th>
-                    <th>Department</th>
+                    <th>Business Unit</th>
                     <th>Role</th>
                     <th>Designation</th>
                     <th>Manager</th>

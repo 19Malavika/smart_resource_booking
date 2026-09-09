@@ -28,11 +28,12 @@ function handleImageError() {
 
 <template>
     <Head title="Welcome" />
-    <div class="bg-gray-50 text-black/50 dark:bg-black dark:text-white/50">
+    <div class="bg-gray-50 text-black/50 dark:bg-black dark:text-white/50 relative">
         <img
             id="background"
-            class="absolute -left-20 top-0 max-w-[877px]"
-            src="https://laravel.com/assets/img/welcome/background.svg"
+            class="absolute inset-0 h-full w-full object-cover opacity-30 mix-blend-luminosity"
+            src="/images/hero_login_new.jpg"
+            alt="Corporate office hero"
         />
         <div
             class="relative flex min-h-screen flex-col items-center justify-center selection:bg-[#FF2D20] selection:text-white"
